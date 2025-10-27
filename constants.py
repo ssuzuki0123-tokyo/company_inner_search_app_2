@@ -55,6 +55,10 @@ SUPPORTED_EXTENSIONS = {
 WEB_URL_LOAD_TARGETS = [
     "https://generative-ai.web-camp.io/"
 ]
+CHUNK_SIZE = 500
+CHUNK_OVERLAP = 50
+
+VECTOR_SEARCH_TOP_K = 5
 
 
 # ==========================================
