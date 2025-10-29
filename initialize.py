@@ -241,19 +241,14 @@ def csv_single_doc_load(path, encoding="utf-8"):
         return f"## 部署: {dept}" + ((" | " + " | ".join(synonyms)) if synonyms else "")
 
     parts = []
-    print(f"\n🔍 CSV処理開始: {path}")
-    print(f"DataFrame形状: {df.shape}")
-    print(f"部署一覧: {df[COL_DEPT].unique().tolist()}")
     
     for dept, g in df.groupby(COL_DEPT):
-        print(f"\n📁 部署処理中: {dept} ({len(g)}名)")
         parts.append("\n")
         parts.append(dept_header_with_synonyms(dept))
 
         g_sorted = g.sort_values(by=[COL_NAME, COL_ID], kind="stable")
 
-        for i, (_, row) in enumerate(g_sorted.iterrows(), 1):
-            print(f"  👤 従業員 {i}/{len(g)}: {row[COL_NAME]} ({row[COL_ID]})")
+        for _, row in g_sorted.iterrows():
             emp_block = (
                 "[EMP]"
                 f"社員ID: {row[COL_ID]},"
@@ -276,15 +271,6 @@ def csv_single_doc_load(path, encoding="utf-8"):
             
     
     full_text = "#".join(parts).strip()
-    
-    # ターミナルにfull_textの内容を表示
-    print("=" * 60)
-    print("CSV処理結果 - full_text の内容:")
-    print("=" * 60)
-    print(full_text)
-    print("=" * 60)
-    print(f"full_text の文字数: {len(full_text)}")
-    print("=" * 60)
     
     return [Document(page_content=full_text, metadata={"source": path, "type": "csv"})]
 
