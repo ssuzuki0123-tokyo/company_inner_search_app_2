@@ -241,4 +241,4 @@ def adjust_string(s):
         return s
     
     # OSがWindows以外の場合はそのまま返す
-    return s
+    return 
