@@ -19,6 +19,8 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
 import constants as ct
+import pandas as pd
+from langchain.schema import Document
 
 
 ############################################################
@@ -198,6 +200,93 @@ def recursive_file_check(path, docs_all):
         # パスがファイルの場合、ファイル読み込み
         file_load(path, docs_all)
 
+def csv_single_doc_load(path, encoding="utf-8"):
+    """
+    CSV全行を“部門ごとのセクション”にまとめて、1つのDocumentとして返すローダー
+    - 見出しに同義語を併記（人事部/HR/Human Resources/ヒューマンリソース）
+    - 各従業員は [EMP] で区切り、キー:バリュー形式に整形
+    """
+    df = pd.read_csv(path, encoding=encoding)
+
+    COL_ID        = "社員ID"
+    COL_NAME      = "氏名（フルネーム）"
+    COL_SEX       = "性別"
+    COL_BIRTH     = "生年月日"
+    COL_AGE       = "年齢"
+    COL_MAIL      = "メールアドレス"
+    COL_EMP_CLASS = "従業員区分"
+    COL_JOINED    = "入社日"
+    COL_DEPT      = "部署"
+    COL_ROLE      = "役職"
+    COL_SKILLS    = "スキルセット"
+    COL_CERTS     = "保有資格"
+    COL_UNIV      = "大学名"
+    COL_FACULTY   = "学部・学科"
+    COL_GRAD      = "卒業年月日"
+
+    def dept_header_with_synonyms(dept):
+        synonyms = []
+        if dept == "人事部":
+            synonyms = ["HR", "Human Resources", "ヒューマンリソース"]
+        elif dept == "営業部":
+            synonyms = ["Sales", "セールス"]
+        elif dept == "マーケティング部":
+            synonyms = ["Marketing", "マーティング", "マーケ"]
+        elif dept == "総務部":
+            synonyms = ["General Affairs", "GA", "ゼネラルアフェアーズ"]
+        elif dept == "経理部":
+            synonyms = ["Accounting", "Finance", "ファイナンス"]
+        elif dept == "IT部":
+            synonyms = ["IT", "インフォメーションテクノロジー", "システム部", "情シス"]
+        return f"## 部署: {dept}" + ((" | " + " | ".join(synonyms)) if synonyms else "")
+
+    parts = []
+    print(f"\n🔍 CSV処理開始: {path}")
+    print(f"DataFrame形状: {df.shape}")
+    print(f"部署一覧: {df[COL_DEPT].unique().tolist()}")
+    
+    for dept, g in df.groupby(COL_DEPT):
+        print(f"\n📁 部署処理中: {dept} ({len(g)}名)")
+        parts.append("\n")
+        parts.append(dept_header_with_synonyms(dept))
+
+        g_sorted = g.sort_values(by=[COL_NAME, COL_ID], kind="stable")
+
+        for i, (_, row) in enumerate(g_sorted.iterrows(), 1):
+            print(f"  👤 従業員 {i}/{len(g)}: {row[COL_NAME]} ({row[COL_ID]})")
+            emp_block = (
+                "[EMP]"
+                f"社員ID: {row[COL_ID]},"
+                f"氏名（フルネーム）: {row[COL_NAME]},"
+                f"性別: {row[COL_SEX]},"
+                f"生年月日: {row[COL_BIRTH]},"
+                f"年齢: {row[COL_AGE]},"
+                f"メールアドレス: {row[COL_MAIL]},"
+                f"従業員区分: {row[COL_EMP_CLASS]},"
+                f"入社日: {row[COL_JOINED]},"
+                f"部署: {row[COL_DEPT]},"
+                f"役職: {row[COL_ROLE]},"
+                f"スキルセット: {row[COL_SKILLS]},"
+                f"保有資格: {row[COL_CERTS]},"
+                f"大学名: {row[COL_UNIV]},"
+                f"学部・学科: {row[COL_FACULTY]},"
+                f"卒業年月日: {row[COL_GRAD]},"
+            )
+            parts.append(emp_block)
+            
+    
+    full_text = "#".join(parts).strip()
+    
+    # ターミナルにfull_textの内容を表示
+    print("=" * 60)
+    print("CSV処理結果 - full_text の内容:")
+    print("=" * 60)
+    print(full_text)
+    print("=" * 60)
+    print(f"full_text の文字数: {len(full_text)}")
+    print("=" * 60)
+    
+    return [Document(page_content=full_text, metadata={"source": path, "type": "csv"})]
 
 def file_load(path, docs_all):
     """
@@ -215,8 +304,12 @@ def file_load(path, docs_all):
     # 想定していたファイル形式の場合のみ読み込む
     if file_extension in ct.SUPPORTED_EXTENSIONS:
         # ファイルの拡張子に合ったdata loaderを使ってデータ読み込み
-        loader = ct.SUPPORTED_EXTENSIONS[file_extension](path)
-        docs = loader.load()
+        if file_extension == ".csv":
+            docs = csv_single_doc_load(path, encoding="utf-8")
+        else:
+            loader = ct.SUPPORTED_EXTENSIONS[file_extension](path)
+            docs = loader.load()
+        
         docs_all.extend(docs)
 
 
