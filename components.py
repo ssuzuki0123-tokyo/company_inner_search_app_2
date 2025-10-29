@@ -35,6 +35,14 @@ def display_select_mode():
             options=[ct.ANSWER_MODE_1, ct.ANSWER_MODE_2],
             label_visibility="collapsed"
         )
+        
+        # 会話履歴クリアボタンを追加
+        st.sidebar.divider()
+        if st.sidebar.button("🗑️ 会話履歴をクリア", help="新しいトピックを質問する前に履歴をクリアすると回答精度が向上します"):
+            # 会話履歴をリセット
+            st.session_state.messages = []
+            st.session_state.chat_history = []
+            st.rerun()
 
 
 def display_initial_ai_message():
@@ -270,6 +278,7 @@ def display_contact_llm_response(llm_response):
     Returns:
         LLMからの回答を画面表示用に整形した辞書データ
     """
+    
     # LLMからの回答を表示
     st.markdown(llm_response["answer"])
 
@@ -297,7 +306,7 @@ def display_contact_llm_response(llm_response):
             # ページ番号が取得できた場合のみ、ページ番号を表示（ドキュメントによっては取得できない場合がある）
             if "page" in document.metadata:
                 # ページ番号を取得
-                page_number = document.metadata["page"]
+                page_number = document.metadata["page"] + 1  # ページ番号は0始まりのため、+1して表示
                 # 「ファイルパス」と「ページ番号」
                 file_info = f"{file_path} (ページNo.{page_number})"
             else:
