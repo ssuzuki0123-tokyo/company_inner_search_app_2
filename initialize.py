@@ -118,7 +118,9 @@ def initialize_retriever():
     for doc in docs_all:
         doc.page_content = adjust_string(doc.page_content)
         for key in doc.metadata:
-            doc.metadata[key] = adjust_string(doc.metadata[key])
+            # メタデータの値が文字列の場合のみ調整を行う
+            if isinstance(doc.metadata[key], str):
+                doc.metadata[key] = adjust_string(doc.metadata[key])
     
     # 埋め込みモデルの用意
     embeddings = OpenAIEmbeddings()
@@ -320,4 +322,4 @@ def adjust_string(s):
         return s
     
     # OSがWindows以外の場合はそのまま返す
-    return 
+    return s 
